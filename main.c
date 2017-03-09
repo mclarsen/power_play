@@ -1,15 +1,5 @@
 #include <stdio.h>
-#include <algorithm>
-#include <iostream>
-#include <stdlib.h>
 #include "estimator.h"
-struct adjustment
-{
-  int from;
-  int to;
-  float amount;
-  float current_max_time;
-};
 
 
 int main(int argc, char** argv)

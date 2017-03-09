@@ -2,6 +2,9 @@
 #define estimator_h
 #include <vector>
 #include <assert.h>
+#include <algorithm>
+#include <iostream>
+#include <stdlib.h>
 
 class Estimator
 {
@@ -74,22 +77,36 @@ public:
     
 };  // class estimator 
 
+struct Adjustment
+{
+  int from;
+  int to;
+  double amount;
+};
+
 struct PowerAllocation
 {
+  // Pointer to data share between other instances 
+  Estimator *m_estimator;
+  std::vector<double> *m_orig_estimates;
+  
   std::vector<double> m_power_values;
   std::vector<double> m_times;
 
   PowerAllocation(const int size, 
                   const double max_power,
-                  const std::vector<double> &init_estimates)
-    : m_values(size, max_power),
-      m_times(init_estimates)
+                  const std::vector<double> &init_estimates,
+                  Estimator *estimator)
+    : m_power_values(size, max_power),
+      m_times(init_estimates),
+      m_estimator(estimator)
   {
     assert(size == m_times.size());
     assert(size > 0);
+    assert(m_estimator != NULL);
   }
   
-  int GetMax()
+  int get_max_index() const 
   {
     const int size = static_cast<int>(m_times.size());
     int max_index = 0; 
@@ -103,6 +120,12 @@ struct PowerAllocation
     }
     return max_index;
   } // get max
+
+  void apply_adjustment(const Adjustment &adj)
+  {
+    double power_from =  m_power_values[adj.from];
+  } 
+
 }; //class PowerAllocation
 
 class PowerOptimizer
