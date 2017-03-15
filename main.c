@@ -29,11 +29,23 @@ int main(int argc, char** argv)
                         204.024, 208.127, 211.4, 215.313, 
                         219.024, 223.137, 227.409};
 
-    double ests[4] = {1.64479, 1.65966, 1.66107, 2.27343};
+    const int est_size = 4;
+    double ests[est_size] = {1.64479, 1.65966, 1.66107, 2.27343};
 
-    
+    std::vector<double> estimates(est_size);
+    for(int i = 0; i < est_size; ++i)
+    {
+      estimates[i] = ests[i];
+    }
+
     Estimator estimator(times, power, size);
     double new_est = estimator.estimate(65, ests[0]);
     printf("Original time %f new time %f\n", ests[0], new_est);
+
+    PowerOptimizer optimizer(estimator, estimates);
+    double ave_power_per_node = 80;
+    double power_inc;
+    PowerAllocation alloc = optimizer.optimize(ave_power_per_node, power_inc);
+    alloc.print();
  
 }
