@@ -10,14 +10,20 @@ int main(int argc, char** argv)
                       "NAME\n"
                       "  power_play - Best power scheduling strategy.\n"
                       "SYNOPSIS\n"
-                      "  %s [--help | -h] [-i power_incr] [-p avg_pow_per_node]\n"
+                      "  %s [--help | -h] [-i power_incr] [-p avg_pow_per_node] [-v]\n"
                       "OPTIONS\n"
                       "  --help | -h\n"
                       "     Display this help information, then exit.\n"
-                      "  -i\n"
+                      "  -i incrementor\n"
                       "     Increment of power values.\n"
-                      "  -p\n"
+                      "  -p power\n"
                       "     Power per node.\n"
+                      "  -v\n"
+                      "     Verbose output.\n"
+                      "  -n est_size\n"
+                      "     Number of estimates.\n"
+                      "  -c config\n"
+                      "     Letter of config.\n"
                       "\n";
   if(argc == 1 || argc > 1 && (
              strncmp(argv[1], "--help", strlen("--help")) == 0 ||
@@ -26,7 +32,7 @@ int main(int argc, char** argv)
     printf(usage, argv[0]);
     return EXIT_SUCCESS;
   }
-  if(argc < 5)
+  if(argc < 9)
   {
     printf(usage, argv[0]);
     return EXIT_FAILURE;
@@ -35,7 +41,10 @@ int main(int argc, char** argv)
   int opt;
   double power_inc;
   double ave_power_per_node;
-  while((opt = getopt(argc, argv, "i:p:")) != -1)
+  bool is_verbose = false;
+  int est_size;
+  char *config = NULL;
+  while((opt = getopt(argc, argv, "i:p:vn:c:")) != -1)
   {
     switch(opt)
     {
@@ -44,6 +53,15 @@ int main(int argc, char** argv)
         break;
       case 'p':
         ave_power_per_node = atof(optarg);
+        break;
+      case 'v':
+        is_verbose = true;
+        break;
+      case 'n':
+        est_size = atoi(optarg);
+        break;
+      case 'c':
+        config = optarg;
         break;
       default:
         std::cerr<<"Error: unknown parameter\n";
@@ -77,36 +95,142 @@ int main(int argc, char** argv)
                         204.024, 208.127, 211.4, 215.313, 219.024,
                         223.137, 227.409};
 
-    const int est_size = 4;
-    double ests[est_size] = {1.64479, 1.65966, 1.66107, 2.27343};
-
-    std::vector<double> estimates(est_size);
-    for(int i = 0; i < est_size; ++i)
+  if (est_size == 8)
+  {
+    if(strcmp(config, "A") == 0)
     {
-      estimates[i] = ests[i];
-    }
+      double ests[est_size] = {1.40017, 0.298057, 1.4095, 0.315991, 1.41141, 0.316148, 1.42095, 0.646492};
+      std::vector<double> estimates(est_size);
+      for(int i = 0; i < est_size; ++i)
+      {
+        estimates[i] = ests[i];
+      }
 
-    Estimator estimator(times, power, size);
-#if 0
-    std::cout<<"pow orig_est new_est\n";
-    for(int i = 0; i < size; ++i)
+      Estimator estimator(times, power, size, is_verbose);
+
+      PowerOptimizer optimizer(estimator, estimates, is_verbose);
+      PowerAllocation alloc = optimizer.optimize(ave_power_per_node, power_inc, is_verbose);
+      alloc.print();
+    }
+    else if(strcmp(config, "B") == 0)
     {
-      double new_est0 = estimator.estimate(power[i], ests[0]);
-      double new_est1 = estimator.estimate(power[i], ests[1]);
-      double new_est2 = estimator.estimate(power[i], ests[2]);
-      double new_est3 = estimator.estimate(power[i], ests[3]);
-      //std::cout<<power[i]<<" "<<ests[0]<<" "<<new_est0<<"\n";
-      //std::cout<<power[i]<<" "<<ests[1]<<" "<<new_est1<<"\n";
-      //std::cout<<power[i]<<" "<<ests[2]<<" "<<new_est2<<"\n";
-      //std::cout<<power[i]<<" "<<ests[3]<<" "<<new_est3<<"\n";
+      double ests[est_size] = {0.0984462, 0.136925, 0.0985987, 0.137073, 0.0985987, 0.137073, 0.098704, 0.137221};
+      std::vector<double> estimates(est_size);
+      for(int i = 0; i < est_size; ++i)
+      {
+        estimates[i] = ests[i];
+      }
+
+      Estimator estimator(times, power, size, is_verbose);
+
+      PowerOptimizer optimizer(estimator, estimates, is_verbose);
+      PowerAllocation alloc = optimizer.optimize(ave_power_per_node, power_inc, is_verbose);
+      alloc.print();
     }
-    return EXIT_SUCCESS;
+    else if(strcmp(config, "C") == 0)
+    {
+      double ests[est_size] = {0.635545, 0.146498, 0.639121, 0.153703, 0.640393, 0.153808, 0.644058, 0.24526};
+      std::vector<double> estimates(est_size);
+      for(int i = 0; i < est_size; ++i)
+      {
+        estimates[i] = ests[i];
+      }
 
-    double new_est = estimator.estimate(65, ests[0]);
-    printf("Original time %f --- New time %f\n", ests[0], new_est);
-#endif
+      Estimator estimator(times, power, size, is_verbose);
 
-    PowerOptimizer optimizer(estimator, estimates);
-    PowerAllocation alloc = optimizer.optimize(ave_power_per_node, power_inc);
-    alloc.print();
+      PowerOptimizer optimizer(estimator, estimates, is_verbose);
+      PowerAllocation alloc = optimizer.optimize(ave_power_per_node, power_inc, is_verbose);
+      alloc.print();
+    }
+    else if(strcmp(config, "D") == 0)
+    {
+      double ests[est_size] = {0.123995, 0.15892, 0.124162, 0.159088, 0.124162, 0.159088, 0.124329, 0.159255};
+      std::vector<double> estimates(est_size);
+      for(int i = 0; i < est_size; ++i)
+      {
+        estimates[i] = ests[i];
+      }
+
+      Estimator estimator(times, power, size, is_verbose);
+
+      PowerOptimizer optimizer(estimator, estimates, is_verbose);
+      PowerAllocation alloc = optimizer.optimize(ave_power_per_node, power_inc, is_verbose);
+      alloc.print();
+    }
+    else
+    {
+      std::cerr<<"Error: unknown configuration "<<config<<"\n";
+      printf(usage, argv[0]);
+      return EXIT_FAILURE;
+    }
+  }
+  else if (est_size == 64)
+  {
+    if(strcmp(config, "A") == 0)
+    {
+      double ests[est_size] = {0.0718839, 0.0571076, 0.0571076, 0.0571076, 0.120845, 0.0571076, 0.0571076, 0.0571076, 0.120683, 0.0571076, 0.0571076, 0.0571076, 0.0716591, 0.0571076, 0.0571076, 0.0571076, 0.121076, 0.0571692, 0.0571681, 0.0571076, 0.683754, 0.768937, 0.298057, 0.0571076, 0.684801, 0.778464, 0.315991, 0.0571076, 0.120595, 0.0571076, 0.0571076, 0.0571076, 0.120913, 0.0571706, 0.0571706, 0.0571076, 0.68521, 0.779418, 0.316148, 0.0571076, 0.686265, 0.789161, 0.646493, 0.0571076, 0.120371, 0.0571076, 0.0571076, 0.0571076, 0.0717353, 0.0571076, 0.0571076, 0.0571076, 0.120811, 0.0571692, 0.0571681, 0.0571076, 0.1206, 0.0571706, 0.0571706, 0.0571076, 0.0714823, 0.0571076, 0.0571076, 0.0571076};
+      std::vector<double> estimates(est_size);
+      for(int i = 0; i < est_size; ++i)
+      {
+        estimates[i] = ests[i];
+      }
+
+      Estimator estimator(times, power, size, is_verbose);
+
+      PowerOptimizer optimizer(estimator, estimates, is_verbose);
+      PowerAllocation alloc = optimizer.optimize(ave_power_per_node, power_inc, is_verbose);
+      alloc.print();
+    }
+    else if(strcmp(config, "B") == 0)
+    {
+      double ests[est_size] = {0.0625158, 0.0642943, 0.0671348, 0.0720748, 0.0622835, 0.0639309, 0.0665318, 0.0710001, 0.0623145, 0.0639871, 0.066577, 0.0710224, 0.0625171, 0.0643098, 0.0671373, 0.0720791, 0.0622835, 0.0639309, 0.0665318, 0.0710001, 0.0620673, 0.0635966, 0.0659821, 0.0700228, 0.0620978, 0.0636386, 0.0660241, 0.0700441, 0.0622846, 0.0639328, 0.0665342, 0.0710043, 0.0623145, 0.0639871, 0.0665769, 0.0710224, 0.0620978, 0.0636386, 0.0660241, 0.0700441, 0.0621285, 0.0636808, 0.0660664, 0.0700655, 0.0623157, 0.0639771, 0.0665793, 0.0710264, 0.0625171, 0.0643098, 0.0671373, 0.0720791, 0.0622846, 0.0639328, 0.0665342, 0.0710043, 0.0623157, 0.063977, 0.0665793, 0.0710264, 0.0625183, 0.0642983, 0.0671399, 0.0720837};
+      std::vector<double> estimates(est_size);
+      for(int i = 0; i < est_size; ++i)
+      {
+        estimates[i] = ests[i];
+      }
+
+      Estimator estimator(times, power, size, is_verbose);
+
+      PowerOptimizer optimizer(estimator, estimates, is_verbose);
+      PowerAllocation alloc = optimizer.optimize(ave_power_per_node, power_inc, is_verbose);
+      alloc.print();
+    }
+    else if(strcmp(config, "C") == 0)
+    {
+      double ests[est_size] = {0.0625545, 0.0571076, 0.0571076, 0.0571076, 0.0808647, 0.0571076, 0.0571076, 0.0571076, 0.0807889, 0.0571076, 0.0571076, 0.0571076, 0.0624502, 0.0571076, 0.0571076, 0.0571076, 0.0810187, 0.0571295, 0.0571291, 0.0571076, 0.317146, 0.355104, 0.146498, 0.0571076, 0.317537, 0.358811, 0.153703, 0.0571076, 0.080759, 0.0571076, 0.0571076, 0.0571076, 0.0809423, 0.05713, 0.05713, 0.0571076, 0.317815, 0.359447, 0.153808, 0.0571076, 0.318209, 0.363241, 0.24526, 0.0571076, 0.0806612, 0.0571076, 0.0571076, 0.0571076, 0.062501, 0.0571076, 0.0571076, 0.0571076, 0.0809077, 0.0571295, 0.0571291, 0.0571076, 0.0808143, 0.05713, 0.05713, 0.0571076, 0.0623975, 0.0571076, 0.0571076, 0.0571076};
+      std::vector<double> estimates(est_size);
+      for(int i = 0; i < est_size; ++i)
+      {
+        estimates[i] = ests[i];
+      }
+
+      Estimator estimator(times, power, size, is_verbose);
+
+      PowerOptimizer optimizer(estimator, estimates, is_verbose);
+      PowerAllocation alloc = optimizer.optimize(ave_power_per_node, power_inc, is_verbose);
+      alloc.print();
+    }
+    else if(strcmp(config, "D") == 0)
+    {
+      double ests[est_size] = {0.0657128, 0.0675463, 0.0699898, 0.073469, 0.0655101, 0.0672622, 0.069611, 0.0729092, 0.0655516, 0.067313, 0.0696602, 0.0729543, 0.0657139, 0.067548, 0.0699918, 0.073471, 0.0655101, 0.0672622, 0.069611, 0.0729092, 0.0653171, 0.0669945, 0.0692542, 0.0723861, 0.0653581, 0.0670439, 0.0693018, 0.0724292, 0.0655112, 0.067264, 0.0696129, 0.0729112, 0.0655516, 0.067313, 0.0696601, 0.0729543, 0.0653581, 0.0670439, 0.0693018, 0.0724292, 0.0653994, 0.0670935, 0.0693495, 0.0724724, 0.0655527, 0.0673148, 0.0696621, 0.0729562, 0.0657139, 0.067548, 0.0699918, 0.073471, 0.0655112, 0.067264, 0.069613, 0.0729112, 0.0655527, 0.0673148, 0.0696621, 0.0729562, 0.065715, 0.0675497, 0.0699939, 0.0734732};
+      std::vector<double> estimates(est_size);
+      for(int i = 0; i < est_size; ++i)
+      {
+        estimates[i] = ests[i];
+      }
+
+      Estimator estimator(times, power, size, is_verbose);
+
+      PowerOptimizer optimizer(estimator, estimates, is_verbose);
+      PowerAllocation alloc = optimizer.optimize(ave_power_per_node, power_inc, is_verbose);
+      alloc.print();
+    }
+    else
+    {
+      std::cerr<<"Error: unknown configuration "<<config<<"\n";
+      printf(usage, argv[0]);
+      return EXIT_FAILURE;
+    }
+  }
 }

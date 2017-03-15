@@ -14,11 +14,12 @@ protected:
     double m_percent_change;
     std::vector<double> m_times;
     std::vector<double> m_power;
+    bool m_is_verbose;
 public:
     // Give me un-normalized times with 
     // times[0] being the fastest and times[n-1] slowest
     // power[0] highest and power[n-1] lowest
-    Estimator(const double *times, const double *power, const int array_size)
+    Estimator(const double *times, const double *power, const int array_size, bool verbose)
     {
       assert(times[0] <= times[array_size - 1]);
       assert(power[0] >= power[array_size - 1]);
@@ -26,6 +27,8 @@ public:
 
       m_power.resize(array_size);
       m_times.resize(array_size);
+
+      m_is_verbose = verbose;
 
       double max_val = -1;
       double min_val = 1e30;
@@ -138,6 +141,7 @@ struct PowerAllocation
     {
       std::cout<<std::setprecision(3)<<std::setw(6)<<m_power_values[i]<<" | "<<m_times[i]<<"\n";
     }
+    std::cout<<"Runtime: "<<std::setprecision(5)<<get_max_runtime()<<"\n";
   }
   
   int get_max_index() const 
@@ -155,6 +159,20 @@ struct PowerAllocation
     }
     return max_index;
   } // get max
+
+  double get_max_runtime() const 
+  {
+    const int size = static_cast<int>(m_times.size());
+    double max_value = m_times[0];
+    for(int i = 1; i < size; ++i)
+    {
+      if(m_times[i] > max_value) 
+      {
+        max_value = m_times[i]; 
+      }
+    }
+    return max_value;
+  } // get max runtime
 
   void apply_adjustment(const Adjustment &adj)
   {
@@ -174,7 +192,7 @@ struct PowerAllocation
     m_times[adj.to] = new_est_to;
   }
 
-  double check_adjustment(const Adjustment &adj)
+  double check_adjustment(const Adjustment &adj, bool verbose)
   {
     double power_from     = m_power_values[adj.from];
     double power_to       = m_power_values[adj.to];
@@ -185,9 +203,12 @@ struct PowerAllocation
     double new_est_from   = m_estimator->estimate(new_power_from, time_from);
     double new_est_to     = m_estimator->estimate(new_power_to, time_to);
 
-    std::cout<<"orig_est m_times new_power new_time\n";
-    std::cout<<time_from<<" "<<m_times[adj.from]<<" "<<new_power_from<<" "<<std::setprecision(5)<<new_est_from<<"\n";
-    std::cout<<time_to<<" "<<m_times[adj.to]<<" "<<new_power_to<<" "<<std::setprecision(5)<<new_est_to<<"\n";
+    if(verbose == true)
+    {
+      std::cout<<"orig_est m_times new_power new_time\n";
+      std::cout<<time_from<<" "<<m_times[adj.from]<<" "<<new_power_from<<" "<<std::setprecision(5)<<new_est_from<<"\n";
+      std::cout<<time_to<<" "<<m_times[adj.to]<<" "<<new_power_to<<" "<<std::setprecision(5)<<new_est_to<<"\n";
+    }
     
     const int size = static_cast<int>(m_times.size());
 
@@ -232,6 +253,7 @@ struct PowerAllocation
     {
       std::cout<<std::setprecision(3)<<std::setw(6)<<m_power_values[i]<<" | "<<m_times[i]<<"\n";
     }
+    std::cout<<"Runtime: "<<std::setprecision(5)<<get_max_runtime()<<"\n";
   }
 }; //class PowerAllocation
 
@@ -240,16 +262,19 @@ class PowerOptimizer
 protected:
   Estimator m_estimator; 
   std::vector<double> m_orig_estimates; 
+  bool m_is_verbose;
 public:
   PowerOptimizer(Estimator &e, 
-                 const std::vector<double> &estimates)
+                 const std::vector<double> &estimates,
+                 bool verbose)
     : m_estimator(e),
-      m_orig_estimates(estimates)
+      m_orig_estimates(estimates),
+      m_is_verbose(verbose) 
   {
       
   }
 
-  PowerAllocation optimize(double ave_power_per_node, double power_inc)
+  PowerAllocation optimize(double ave_power_per_node, double power_inc, bool verbose)
   {
     // create the inital power allocation
     PowerAllocation allocation(m_orig_estimates.size(),
@@ -266,10 +291,16 @@ public:
 
       if(allocation.m_power_values[bottleneck_idx] + power_inc > m_estimator.get_max_power())
       {
-        std::cout<<"Breaking because bottleneck is at TDP\n";
+        if(verbose == true)
+        {
+          std::cout<<"Breaking because bottleneck is at TDP\n";
+        }
         break;
       }
-      std::cout<<"---- Round "<<round<<" ----\n";
+      if(verbose == true)
+      {
+        std::cout<<"---- Round "<<round<<" ----\n";
+      }
         
       Adjustment best_adj;
       double best_adj_time = bottleneck_time; 
@@ -293,7 +324,7 @@ public:
         temp.from = i;
         temp.amount = power_inc;
         
-        double temp_time = allocation.check_adjustment(temp);
+        double temp_time = allocation.check_adjustment(temp, verbose);
         //std::cout<<i<<" new time "<<temp_time<<" best "<<best_adj_time<<"\n";
         if(temp_time < best_adj_time)
         {
