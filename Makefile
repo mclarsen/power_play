@@ -1,6 +1,6 @@
 all: prog
 
-prog: main.c
+prog: main.c estimator.h
 	clang++ -o $@ $<
 
 clean:

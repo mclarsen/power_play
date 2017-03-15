@@ -1,11 +1,13 @@
 #ifndef estimator_h
 #define estimator_h
+
 #include <vector>
 #include <assert.h>
 #include <algorithm>
 #include <iostream>
 #include <stdlib.h>
 #include <iomanip>
+
 class Estimator
 {
 protected:    
@@ -13,8 +15,7 @@ protected:
     std::vector<double> m_times;
     std::vector<double> m_power;
 public:
-    //
-    // Give me un normalized times with 
+    // Give me un-normalized times with 
     // times[0] being the fastest and times[n-1] slowest
     // power[0] highest and power[n-1] lowest
     Estimator(const double *times, const double *power, const int array_size)
@@ -26,8 +27,8 @@ public:
       m_power.resize(array_size);
       m_times.resize(array_size);
 
-      double max_val= -1;
-      double min_val= 1e30;
+      double max_val = -1;
+      double min_val = 1e30;
       //
       // normalize the time values
       //
@@ -75,7 +76,14 @@ public:
         }
         else break;
       }
+      if(min_index == size)
+      {
+        min_index = size-1;
+      }
       int max_index = min_index - 1; 
+      //std::cout<<"power_value="<<power_value<<"\n";
+      //std::cout<<"min_index="<<min_index<<", max_index="<<max_index<<"\n";
+      //std::cout<<"m_power[min_index]="<<m_power[min_index]<<", m_power[max_index]="<<m_power[max_index]<<"\n";
       assert(min_index < size);
       assert(max_index > -1);
 
@@ -86,7 +94,6 @@ public:
       double time = orig_estimate + normalized_time * diff;
       return time;
     }
-    
 };  // class estimator 
 
 struct Adjustment
@@ -123,6 +130,14 @@ struct PowerAllocation
     {
       m_times[i] = m_estimator->estimate(ave_power_per_node, m_orig_estimates->at(i));
     }
+
+    const int vsize = static_cast<int>(m_times.size());
+    std::cout<<"Power  | Time\n";
+    std::cout<<"------------\n";
+    for(int i = 0; i < vsize; ++i)
+    {
+      std::cout<<std::setprecision(3)<<std::setw(6)<<m_power_values[i]<<" | "<<m_times[i]<<"\n";
+    }
   }
   
   int get_max_index() const 
@@ -143,12 +158,14 @@ struct PowerAllocation
 
   void apply_adjustment(const Adjustment &adj)
   {
-    double power_from = m_power_values[adj.from];
-    double time_from  = m_orig_estimates->at(adj.from);
-    double time_to    = m_orig_estimates->at(adj.to);
-    double power_to   = m_power_values[adj.to];
-    double new_est_to = m_estimator->estimate(power_to + adj.amount, time_to);
-    double new_est_from = m_estimator->estimate(power_from - adj.amount, time_from);
+    double power_from     = m_power_values[adj.from];
+    double power_to       = m_power_values[adj.to];
+    double new_power_to   = power_to + adj.amount;
+    double new_power_from = power_from - adj.amount;
+    double time_from      = m_orig_estimates->at(adj.from);
+    double time_to        = m_orig_estimates->at(adj.to);
+    double new_est_from   = m_estimator->estimate(new_power_from, time_from);
+    double new_est_to     = m_estimator->estimate(new_power_to, time_to);
     
     // save the values
     m_power_values[adj.from] -= adj.amount;
@@ -159,12 +176,18 @@ struct PowerAllocation
 
   double check_adjustment(const Adjustment &adj)
   {
-    double power_from = m_power_values[adj.from];
-    double time_from  = m_orig_estimates->at(adj.from);
-    double time_to    = m_orig_estimates->at(adj.to);
-    double power_to   = m_power_values[adj.to];
-    double new_est_to = m_estimator->estimate(power_to + adj.amount, time_to);
-    double new_est_from = m_estimator->estimate(power_from - adj.amount, time_from);
+    double power_from     = m_power_values[adj.from];
+    double power_to       = m_power_values[adj.to];
+    double new_power_to   = power_to + adj.amount;
+    double new_power_from = power_from - adj.amount;
+    double time_from      = m_orig_estimates->at(adj.from);
+    double time_to        = m_orig_estimates->at(adj.to);
+    double new_est_from   = m_estimator->estimate(new_power_from, time_from);
+    double new_est_to     = m_estimator->estimate(new_power_to, time_to);
+
+    std::cout<<"orig_est m_times new_power new_time\n";
+    std::cout<<time_from<<" "<<m_times[adj.from]<<" "<<new_power_from<<" "<<std::setprecision(5)<<new_est_from<<"\n";
+    std::cout<<time_to<<" "<<m_times[adj.to]<<" "<<new_power_to<<" "<<std::setprecision(5)<<new_est_to<<"\n";
     
     const int size = static_cast<int>(m_times.size());
 
@@ -203,14 +226,13 @@ struct PowerAllocation
   void print()
   {
     const int size = static_cast<int>(m_times.size());
-    std::cout<<"Power   | Time \n";
-    std::cout<<"---------------\n";
+    std::cout<<"Power  | Time\n";
+    std::cout<<"------------\n";
     for(int i = 0; i < size; ++i)
     {
-      std::cout<<std::setprecision(3)<<m_power_values[i]<<"    "<<m_times[i]<<"\n";
+      std::cout<<std::setprecision(3)<<std::setw(6)<<m_power_values[i]<<" | "<<m_times[i]<<"\n";
     }
   }
-
 }; //class PowerAllocation
 
 class PowerOptimizer
@@ -244,10 +266,10 @@ public:
 
       if(allocation.m_power_values[bottleneck_idx] + power_inc > m_estimator.get_max_power())
       {
-        std::cout<<"Breaking because bottlenect is at full power\n";
+        std::cout<<"Breaking because bottleneck is at TDP\n";
         break;
       }
-      std::cout<<"Round "<<round<<"\n";
+      std::cout<<"---- Round "<<round<<" ----\n";
         
       Adjustment best_adj;
       double best_adj_time = bottleneck_time; 
@@ -272,7 +294,7 @@ public:
         temp.amount = power_inc;
         
         double temp_time = allocation.check_adjustment(temp);
-        std::cout<<i<<" new time "<<temp_time<<" best "<<best_adj_time<<"\n";
+        //std::cout<<i<<" new time "<<temp_time<<" best "<<best_adj_time<<"\n";
         if(temp_time < best_adj_time)
         {
           best_adj_time = temp_time;  
@@ -286,7 +308,7 @@ public:
       {
         allocation.apply_adjustment(best_adj);
       }
-
+      round++;
     }  // while making progress 
     return allocation;
   }

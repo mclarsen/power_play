@@ -1,33 +1,81 @@
 #include <stdio.h>
-#include "estimator.h"
+#include <getopt.h>
+#include <string.h>
 
+#include "estimator.h"
 
 int main(int argc, char** argv)
 {
+  const char *usage = "\n"
+                      "NAME\n"
+                      "  power_play - Best power scheduling strategy.\n"
+                      "SYNOPSIS\n"
+                      "  %s [--help | -h] [-i power_incr] [-p avg_pow_per_node]\n"
+                      "OPTIONS\n"
+                      "  --help | -h\n"
+                      "     Display this help information, then exit.\n"
+                      "  -i\n"
+                      "     Increment of power values.\n"
+                      "  -p\n"
+                      "     Power per node.\n"
+                      "\n";
+  if(argc == 1 || argc > 1 && (
+             strncmp(argv[1], "--help", strlen("--help")) == 0 ||
+             strncmp(argv[1], "-h", strlen("-h")) == 0))
+  {
+    printf(usage, argv[0]);
+    return EXIT_SUCCESS;
+  }
+  if(argc < 5)
+  {
+    printf(usage, argv[0]);
+    return EXIT_FAILURE;
+  }
+
+  int opt;
+  double power_inc;
+  double ave_power_per_node;
+  while((opt = getopt(argc, argv, "i:p:")) != -1)
+  {
+    switch(opt)
+    {
+      case 'i':
+        power_inc = atof(optarg);
+        break;
+      case 'p':
+        ave_power_per_node = atof(optarg);
+        break;
+      default:
+        std::cerr<<"Error: unknown parameter\n";
+        printf(usage, argv[0]);
+        return EXIT_FAILURE;
+    }
+  }
+
   const static int size = 52;
   double power[size] = {115, 114, 113, 112, 111, 
-                     110, 109, 108, 107, 106, 
-                     105, 104, 103, 102, 101, 
-                     100, 99, 98, 97, 96, 95, 
-                     94, 93, 92, 91, 90, 89, 
-                     88, 87, 86, 85, 84, 83, 
-                     82, 81, 80, 79, 78, 77, 
-                     76, 75, 74, 73, 72, 71, 
-                     70, 69, 68, 67, 66, 65, 64};
+                        110, 109, 108, 107, 106, 
+                        105, 104, 103, 102, 101, 
+                        100, 99, 98, 97, 96,
+                        95, 94, 93, 92, 91,
+                        90, 89, 88, 87, 86, 
+                        85, 84, 83, 82, 81,
+                        80, 79, 78, 77, 76,
+                        75, 74, 73, 72, 71, 
+                        70, 69, 68, 67, 66,
+                        65, 64};
 
-  double times[size] = {163.21, 163.133, 162.991, 163.239, 
-                        163.555, 163.328, 163, 162.979, 163.467, 
-                        163.007, 163.251, 163.172, 163.508, 
-                        163.237, 163.148, 163.04, 163.96, 
-                        165.358, 165.717, 166.549, 167.118, 
-                        167.887, 168.771, 170.231, 171.461, 
-                        172.481, 173.051, 173.822, 174.663, 
-                        176.108, 176.753, 178.275, 179.087, 
-                        180.204, 181.856, 183.431, 184.244, 
-                        185.467, 186.802, 188.932, 191.233, 
-                        192.752, 195.378, 198.025, 201.18, 
-                        204.024, 208.127, 211.4, 215.313, 
-                        219.024, 223.137, 227.409};
+  double times[size] = {163.21, 163.133, 162.991, 163.239, 163.555,
+                        163.328, 163, 162.979, 163.467, 163.007,
+                        163.251, 163.172, 163.508, 163.237, 163.148, 
+                        163.04, 163.96, 165.358, 165.717, 166.549, 
+                        167.118, 167.887, 168.771, 170.231, 171.461,
+                        172.481, 173.051, 173.822, 174.663, 176.108,
+                        176.753, 178.275, 179.087, 180.204, 181.856,
+                        183.431, 184.244, 185.467, 186.802, 188.932,
+                        191.233, 192.752, 195.378, 198.025, 201.18,
+                        204.024, 208.127, 211.4, 215.313, 219.024,
+                        223.137, 227.409};
 
     const int est_size = 4;
     double ests[est_size] = {1.64479, 1.65966, 1.66107, 2.27343};
@@ -39,13 +87,26 @@ int main(int argc, char** argv)
     }
 
     Estimator estimator(times, power, size);
+#if 0
+    std::cout<<"pow orig_est new_est\n";
+    for(int i = 0; i < size; ++i)
+    {
+      double new_est0 = estimator.estimate(power[i], ests[0]);
+      double new_est1 = estimator.estimate(power[i], ests[1]);
+      double new_est2 = estimator.estimate(power[i], ests[2]);
+      double new_est3 = estimator.estimate(power[i], ests[3]);
+      //std::cout<<power[i]<<" "<<ests[0]<<" "<<new_est0<<"\n";
+      //std::cout<<power[i]<<" "<<ests[1]<<" "<<new_est1<<"\n";
+      //std::cout<<power[i]<<" "<<ests[2]<<" "<<new_est2<<"\n";
+      //std::cout<<power[i]<<" "<<ests[3]<<" "<<new_est3<<"\n";
+    }
+    return EXIT_SUCCESS;
+
     double new_est = estimator.estimate(65, ests[0]);
-    printf("Original time %f new time %f\n", ests[0], new_est);
+    printf("Original time %f --- New time %f\n", ests[0], new_est);
+#endif
 
     PowerOptimizer optimizer(estimator, estimates);
-    double ave_power_per_node = 80;
-    double power_inc;
     PowerAllocation alloc = optimizer.optimize(ave_power_per_node, power_inc);
     alloc.print();
- 
 }
