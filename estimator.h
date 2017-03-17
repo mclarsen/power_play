@@ -135,11 +135,18 @@ struct PowerAllocation
     }
 
     const int vsize = static_cast<int>(m_times.size());
-    std::cout<<"Power  | Time\n";
-    std::cout<<"------------\n";
+    std::cout<<"Node | Power  | Time\n";
+    std::cout<<"--------------------\n";
     for(int i = 0; i < vsize; ++i)
     {
-      std::cout<<std::setprecision(3)<<std::setw(6)<<m_power_values[i]<<" | "<<m_times[i]<<"\n";
+      if(m_times[i] == get_max_runtime())
+      {
+        std::cout<<std::setw(2)<<i<<"   | "<<std::setprecision(3)<<std::setw(6)<<m_power_values[i]<<" | "<<std::setprecision(5)<<m_times[i]<<" *\n";
+      }
+      else
+      {
+        std::cout<<std::setw(2)<<i<<"   | "<<std::setprecision(3)<<std::setw(6)<<m_power_values[i]<<" | "<<std::setprecision(5)<<m_times[i]<<"\n";
+      }
     }
     std::cout<<"Runtime: "<<std::setprecision(5)<<get_max_runtime()<<"\n";
   }
@@ -247,11 +254,18 @@ struct PowerAllocation
   void print()
   {
     const int size = static_cast<int>(m_times.size());
-    std::cout<<"Power  | Time\n";
-    std::cout<<"------------\n";
+    std::cout<<"Node | Power  | Time\n";
+    std::cout<<"--------------------\n";
     for(int i = 0; i < size; ++i)
     {
-      std::cout<<std::setprecision(3)<<std::setw(6)<<m_power_values[i]<<" | "<<m_times[i]<<"\n";
+      if(m_times[i] == get_max_runtime())
+      {
+        std::cout<<std::setw(2)<<i<<"   | "<<std::setprecision(3)<<std::setw(6)<<m_power_values[i]<<" | "<<std::setprecision(5)<<m_times[i]<<" *\n";
+      }
+      else
+      {
+        std::cout<<std::setw(2)<<i<<"   | "<<std::setprecision(3)<<std::setw(6)<<m_power_values[i]<<" | "<<std::setprecision(5)<<m_times[i]<<"\n";
+      }
     }
     std::cout<<"Runtime: "<<std::setprecision(5)<<get_max_runtime()<<"\n";
   }
